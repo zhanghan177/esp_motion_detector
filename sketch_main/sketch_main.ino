@@ -5,80 +5,89 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
-#include "WiFi.h"
 
-#include "WiFiConfig.h"
 #include "global_state.h"
+#include "event.h"
 
 const int PIR_PIN = 12;  // pin number for PIR control
 const int MAIN_LOOP_INTERVAL = 5000;  // sleep interval for main event loop. in ms
+const unsigned long ROOM_IDLE_THRESHOLD = 15 * 60 * 1000;  // in ms
 
 // Vairables will change
-volatile SemaphoreHandle_t mutex;
-volatile global_state_t global_state = STATE_EMPTY;
-volatile bool state_changed = false;
-unsigned long people_left_at;
+SemaphoreHandle_t mutex;
+global_state_t global_state;
+unsigned long room_empty_duration;
+long PIR_reading;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
 
   connectToWiFiPSK();
-  reset_PIR();
+
+  time_management_setup();
+
+  // Initialize global states
+  global_state = STATE_EMPTY_LONG_TIME;
 
   mutex = xSemaphoreCreateMutex();
+
   lock(mutex);
+  reset_PIR();
 
   // Intialize the PIR pin as an input
   pinMode(PIR_PIN, INPUT);
   // Attach interrupt service routine to PIR sensor
   attachInterrupt(digitalPinToInterrupt(PIR_PIN),
                   motion_sensor_ISR, CHANGE);
-
   unlock(mutex);
 
   Serial.println("Setup complete.");
 }
 
-void reset_PIR() {
-  global_state = STATE_EMPTY;  // reset global state
-  state_changed = false;
-}
-
 void loop() {
-  // put your main code here, to run repeatedly:
-  bool people_enter = false;
-  bool people_left = false;;
+  event_t event = EVENT_NO_EVENT;
+  unsigned long now = millis();
+
   lock(mutex);
-  Serial.printf("Values: %d, %d\n", global_state, state_changed);
-  if (state_changed) {
-    switch (global_state) {
-      case STATE_EMPTY:
-        people_left = true;
-        break;
-      case STATE_OCCUPIED:
-        people_enter = true;
-        break;
-    }
+  Serial.printf("Values: %d, now: %lu\n", PIR_reading, now);
+  switch (PIR_reading) {
+    case LOW:
+      switch (global_state) {
+        case STATE_OCCUPIED:
+          event = EVENT_PEOPLE_JUST_LEFT;
+          break;
+        case STATE_EMPTY:
+          if (time_difference_meet_threshold(room_empty_duration, ROOM_IDLE_THRESHOLD)) {
+            event = EVENT_ROOM_EMPTY_LONG_TIME;
+          }
+          break;
+        case STATE_EMPTY_LONG_TIME:
+          break;
+      }
+      break;
+    case HIGH:
+      event = EVENT_PEOPLE_ENTER;
+      break;
   }
-
-  if (people_left) {
-    people_left_at = millis();
-  }
-
   reset_PIR();
   unlock(mutex);
 
+  switch (event) {
+    case EVENT_PEOPLE_ENTER:
+      switch_turn_on();
+      break;
+    case EVENT_PEOPLE_JUST_LEFT:
+      room_empty_duration = 0;
+      break;
+    case EVENT_ROOM_EMPTY_LONG_TIME:
+      switch_turn_off();
+      break;
+  }
+
+  if (global_state == STATE_EMPTY) room_empty_duration += MAIN_LOOP_INTERVAL;
+
   delay(MAIN_LOOP_INTERVAL);
-}
-
-void lock(SemaphoreHandle_t l) {
-  while (xSemaphoreTake(l, (TickType_t) 10) != pdTRUE) {}
-  return;
-}
-
-void unlock(SemaphoreHandle_t l) {
-  xSemaphoreGive(l);
 }
 
 /*
@@ -87,33 +96,9 @@ void unlock(SemaphoreHandle_t l) {
 void motion_sensor_ISR() {
   long value = digitalRead(PIR_PIN);
   lock(mutex);
-  state_changed = true;
   if (value == HIGH) {
     // motion detected
-    global_state = STATE_OCCUPIED;
+    PIR_reading = HIGH;
   }
   unlock(mutex);
-}
-
-void connectToWiFiPSK()
-{
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WiFi_SSID, WiFi_password);
-  Serial.print("Connecting to ");
-  Serial.println(WiFi_SSID);
-
-  uint8_t i = 0;
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(".");
-    delay(500);
-
-    if ((++i % 16) == 0)
-    {
-      Serial.println(F(" still trying to connect"));
-    }
-  }
-
-  Serial.print(F("Connected. My IP address is: "));
-  Serial.println(WiFi.localIP());
 }
