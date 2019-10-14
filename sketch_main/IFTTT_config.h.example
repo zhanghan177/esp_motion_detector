@@ -1,0 +1,6 @@
+#ifndef _IFTTT_CONFIG_H
+#define _IFTTT_CONFIG_H
+
+char *ifttt_key = "<change-me>";
+
+#endif
