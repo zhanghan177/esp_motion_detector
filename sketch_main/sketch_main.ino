@@ -9,8 +9,8 @@
 #include "global_state.h"
 #include "event.h"
 
-const int PIR_PIN = 12;  // pin number for PIR control
-const int MAIN_LOOP_INTERVAL = 5000;  // sleep interval for main event loop. in ms
+const int PIR_PIN = 13;  // pin number for PIR control
+const int MAIN_LOOP_INTERVAL = 1000;  // sleep interval for main event loop. in ms
 const unsigned long ROOM_IDLE_THRESHOLD = 15 * 60 * 1000;  // in ms
 
 // Vairables will change
@@ -36,8 +36,8 @@ void setup() {
   reset_PIR();
 
   // Intialize the PIR pin as an input
-  pinMode(PIR_PIN, INPUT);
-  // Attach interrupt service routine to PIR sensor
+  pinMode(PIR_PIN, INPUT_PULLUP);
+  // Attach interrupt service routine to PIR sensor3
   attachInterrupt(digitalPinToInterrupt(PIR_PIN),
                   motion_sensor_ISR, CHANGE);
   unlock(mutex);
@@ -51,6 +51,7 @@ void loop() {
 
   lock(mutex);
   Serial.printf("Values: %d, now: %lu\n", PIR_reading, now);
+  
   switch (PIR_reading) {
     case LOW:
       switch (global_state) {
