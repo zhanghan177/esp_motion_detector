@@ -31,15 +31,17 @@ const char* root_ca = \
 char *ifttt_webhook = "https://maker.ifttt.com/trigger/%s/with/key/%s";
 
 void switch_turn_on() {
-  char *cmd = "turn_on_bedroom";
-
-  send_to_ifttt(cmd);
+  if (ENABLE_TURN_ON_SWITCH) {
+    char *cmd = "turn_on_bedroom";
+    send_to_ifttt(cmd);
+  }
 }
 
 void switch_turn_off() {
-  char *cmd = "turn_off_bedroom";
-
-  send_to_ifttt(cmd);
+  if (ENABLE_TURN_OFF_SWITCH) {
+    char *cmd = "turn_off_bedroom";
+    send_to_ifttt(cmd);
+  }
 }
 
 void send_to_ifttt(char *cmd) {

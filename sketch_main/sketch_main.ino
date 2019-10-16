@@ -12,6 +12,8 @@
 const int PIR_PIN = 13;  // pin number for PIR control
 const int MAIN_LOOP_INTERVAL = 1000;  // sleep interval for main event loop. in ms
 const unsigned long ROOM_IDLE_THRESHOLD = 15 * 60 * 1000;  // in ms
+const bool ENABLE_TURN_ON_SWITCH = false;  // Currently, we only want to use ESP to automatically turn off switch
+const bool ENABLE_TURN_ON_SWITCH = true;  //
 
 // Vairables will change
 SemaphoreHandle_t mutex;
@@ -50,8 +52,8 @@ void loop() {
   unsigned long now = millis();
 
   lock(mutex);
-  Serial.printf("Values: %d, now: %lu\n", PIR_reading, now);
-  
+  Serial.printf("Values: %ld, now: %lu\n", PIR_reading, now);
+
   switch (PIR_reading) {
     case LOW:
       switch (global_state) {
@@ -96,6 +98,9 @@ void loop() {
 */
 void motion_sensor_ISR() {
   long value = digitalRead(PIR_PIN);
+
+  Serial.printf("ISR Interrupt! %ld\n", value);
+
   lock(mutex);
   if (value == HIGH) {
     // motion detected
