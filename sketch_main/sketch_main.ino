@@ -13,7 +13,7 @@ const int PIR_PIN = 13;  // pin number for PIR control
 const int MAIN_LOOP_INTERVAL = 1000;  // sleep interval for main event loop. in ms
 const unsigned long ROOM_IDLE_THRESHOLD = 15 * 60 * 1000;  // in ms
 const bool ENABLE_TURN_ON_SWITCH = false;  // Currently, we only want to use ESP to automatically turn off switch
-const bool ENABLE_TURN_ON_SWITCH = true;  //
+const bool ENABLE_TURN_OFF_SWITCH = true;  //
 
 // Vairables will change
 SemaphoreHandle_t mutex;
