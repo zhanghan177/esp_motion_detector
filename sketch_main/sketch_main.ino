@@ -30,7 +30,7 @@ void setup() {
   time_management_setup();
 
   // Initialize global states
-  global_state = STATE_EMPTY_LONG_TIME;
+  global_state = STATE_EMPTY;
 
   mutex = xSemaphoreCreateMutex();
 
@@ -79,12 +79,15 @@ void loop() {
   switch (event) {
     case EVENT_PEOPLE_ENTER:
       switch_turn_on();
+      global_state = STATE_OCCUPIED;
       break;
     case EVENT_PEOPLE_JUST_LEFT:
       room_empty_duration = 0;
+      global_state = STATE_EMPTY;
       break;
     case EVENT_ROOM_EMPTY_LONG_TIME:
       switch_turn_off();
+      global_state = STATE_EMPTY_LONG_TIME;
       break;
   }
 
